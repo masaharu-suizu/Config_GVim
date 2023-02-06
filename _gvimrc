@@ -1,7 +1,7 @@
 colorscheme pablo
 syntax on
-" ベル音を消去
-set belloff=all
+" ベル音を消去 & フラッシュ抑制
+set visualbell t_vb=
 " 行番号を表示する
 set number
 " ルーラーを表示
@@ -40,7 +40,7 @@ set patchmode=.orig
 " ステータスラインを表示
 set laststatus=2
 " ステータスラインの前背面の色を設定
-hi StatusLine guifg=#ffffff guibg=#000000
+hi StatusLine guifg=#ffffff guibg=#000000 ctermfg=white ctermbg=black
 " ステータスラインに表示する内容を設定
 set statusline=%F  " ファイル名表示
 set statusline+=%m " 変更チェック表示
@@ -56,8 +56,6 @@ set statusline+=[Col:%c]     " 列番号を表示
 set wildmenu
 " 自動インデントを禁止
 set noautoindent
-" 改行時の自動コメントアウトを禁止
-set formatoptions-=ro
 " マウスを無効化
 set mouse=
 " クリップボード連携を可能にする
@@ -103,3 +101,58 @@ function! MyTabLine()
 
     return s
 endfunction
+
+" Pluginマネージャーの設定
+" @see https://github.com/junegunn/vim-plug
+call plug#begin()
+Plug 'prabirshrestha/vim-lsp'
+Plug 'mattn/vim-lsp-settings'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'prabirshrestha/asyncomplete.vim'
+call plug#end()
+
+"" prabirshrestha/vim-lspの設定
+"" @see https://github.com/prabirshrestha/vim-lsp
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    setlocal signcolumn=yes
+    if exists('+tagfunc') | setlocal tagfunc=lsp#tagfunc | endif
+    nmap <buffer> gd <plug>(lsp-definition)
+    nmap <buffer> gs <plug>(lsp-document-symbol-search)
+    nmap <buffer> gS <plug>(lsp-workspace-symbol-search)
+    nmap <buffer> gr <plug>(lsp-references)
+    nmap <buffer> gi <plug>(lsp-implementation)
+    nmap <buffer> gt <plug>(lsp-type-definition)
+    nmap <buffer> <leader>rn <plug>(lsp-rename)
+    nmap <buffer> [g <plug>(lsp-previous-diagnostic)
+    nmap <buffer> ]g <plug>(lsp-next-diagnostic)
+    nmap <buffer> K <plug>(lsp-hover)
+    nnoremap <buffer> <expr><c-f> lsp#scroll(+4)
+    nnoremap <buffer> <expr><c-d> lsp#scroll(-4)
+
+    let g:lsp_format_sync_timeout = 1000
+    autocmd! BufWritePre *.rs,*.go call execute('LspDocumentFormatSync')
+
+    " refer to doc to add more commands
+endfunction
+
+augroup lsp_install
+    au!
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+
+"" prabirshrestha/asyncomplete.vimの設定
+"" @see https://github.com/prabirshrestha/asyncomplete.vim
+let g:asyncomplete_auto_popup = 0
+
+function! s:check_back_space() abort
+    let col = col('.') - 1
+    return !col || getline('.')[col - 1]  =~ '\s'
+endfunction
+
+inoremap <silent><expr> <TAB>
+  \ pumvisible() ? "\<C-n>" :
+  \ <SID>check_back_space() ? "\<TAB>" :
+  \ asyncomplete#force_refresh()
+inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+
